@@ -1,0 +1,93 @@
+from undetected_geckodriver import Firefox
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import json
+import os
+
+# لیست سوالات
+questions = [
+    "hello",
+    "message 2 hello"
+]
+
+qa_dict = {}
+chatgpt_url = "https://chat.openai.com"  # لینک درست ChatGPT
+
+# تنظیمات فایرفاکس
+options = Options()
+options.add_argument("--headless")  # حالت بدون گرافیک برای سرور لینوکس
+options.set_preference("network.proxy.type", 0)  # غیرفعال کردن پراکسی
+options.set_preference("dom.webdriver.enabled", False)  # مخفی کردن تشخیص وب‌درایور
+options.set_preference("useAutomationExtension", False)  # غیرفعال کردن افزونه‌های خودکار
+
+try:
+    # راه‌اندازی مرورگر
+    driver = Firefox(options=options)
+    driver.get(chatgpt_url)
+    print("Opening ChatGPT...")
+
+    # لود کوکی‌ها برای لاگین خودکار
+    cookies_file = "cookies.pkl"
+    if os.path.exists(cookies_file):
+        with open(cookies_file, "rb") as f:
+            cookies = pickle.load(f)
+            for cookie in cookies:
+                driver.add_cookie(cookie)
+        driver.refresh()
+        print("Cookies loaded and page refreshed")
+    else:
+        print("لطفاً ابتدا به صورت دستی لاگین کنید و کوکی‌ها را ذخیره کنید.")
+
+    # صبر برای لود صفحه
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "prompt-textarea"))
+    )
+
+    for q in questions:
+        try:
+            # پیدا کردن باکس ورودی
+            input_box = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "prompt-textarea"))
+            )
+            actions = ActionChains(driver)
+            actions.click(input_box).send_keys(q).perform()
+            print(f"Question sent: {q}")
+
+            # پیدا کردن و کلیک روی دکمه ارسال
+            send_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="send-button"]'))
+            )
+            send_button.click()
+
+            # صبر برای لود پاسخ
+            response_element = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-message-author-role="assistant"] div.markdown.prose p'))
+            )
+            last_response = response_element.text
+            qa_dict[q] = last_response
+            print(f"Answer received: {last_response[:60]}...")
+time.sleep(2)  # فاصله کوتاه بین سوالات
+        except Exception as e:
+            qa_dict[q] = f"Error for question '{q}': {e}"
+            print(f"Error for question '{q}': {e}")
+
+    # ذخیره پاسخ‌ها تو فایل JSON
+    with open("chatgpt_qa_output.json", "w", encoding="utf-8") as f:
+        json.dump(qa_dict, f, ensure_ascii=False, indent=4)
+    print("Answers saved to chatgpt_qa_output.json")
+
+except Exception as e:
+    print(f"Error: {e}")
+finally:
+    try:
+        # ذخیره کوکی‌ها برای لاگین بعدی
+        with open(cookies_file, "wb") as f:
+            pickle.dump(driver.get_cookies(), f)
+        driver.quit()
+        print("Browser closed")
+    except:
+        print("Browser not open")
