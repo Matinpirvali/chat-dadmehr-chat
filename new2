@@ -1,6 +1,7 @@
-import undetected_chromedriver as uc
+from undetected_geckodriver import Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
@@ -13,23 +14,25 @@ questions = [
 ]
 
 qa_dict = {}
-# لینک Share از ChatGPT (این رو با لینک واقعی عوض کن)
-chatgpt_url = "https://chat.openai.com/share/your-share-link-here"  # لینک Share رو اینجا بذار
+# لینک Share (اینو با لینک واقعی خودت عوض کن)
+share_url = "https://chatgpt.com/share/xxx"  # لینک Share خودت رو بذار
 
-# تنظیمات کروم
-options = uc.ChromeOptions()
-# بدون --headless برای باز شدن مرورگر به صورت گرافیکی
-options.add_argument("--disable-blink-features=AutomationControlled")  # مخفی کردن تشخیص بات
-options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
-options.add_argument("--no-sandbox")  # برای پایداری در لینوکس
-options.add_argument("--window-size=1920,1080")  # تنظیم اندازه پنجره
+# تنظیمات فایرفاکس
+options = Options()
+# بدون --headless برای باز شدن به صورت گرافیکی
+options.set_preference("network.proxy.type", 0)  # غیرفعال کردن پراکسی
+options.set_preference("dom.webdriver.enabled", False)  # مخفی کردن تشخیص وب‌درایور
+options.set_preference("useAutomationExtension", False)  # غیرفعال کردن افزونه‌های خودکار
+options.set_preference("general.useragent.override", 
+                      "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0")
 
 try:
     # راه‌اندازی مرورگر
-    driver = uc.Chrome(options=options)
-    driver.get(chatgpt_url)
-    print(f"Opening ChatGPT Share link: {chatgpt_url}...")
-    # صبر برای لود صفحه
+    driver = Firefox(options=options)
+    driver.get(share_url)
+    print(f"Opening Share link: {share_url}")
+
+    # صبر برای لود باکس ورودی
     WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.ID, "prompt-textarea"))
     )
